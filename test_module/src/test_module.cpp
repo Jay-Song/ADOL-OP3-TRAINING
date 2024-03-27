@@ -177,9 +177,26 @@ void TestModule::process(std::map<std::string, robotis_framework::Dynamixel *> d
   updateJointAngles(dxls);
   computeForwardKinematics();
   //ROS_INFO_STREAM("hip_height: " << getHipHeight());
-  
-  op3_kd_->calcInverseKinematicsForRightLeg(r_leg_angle_rad_, 0, 0, -default_hip_height_ - 0.02*sin(2.0 * M_PI * current_time_sec_/ period_), 0, 0, 0);
-  op3_kd_->calcInverseKinematicsForLeftLeg(l_leg_angle_rad_, 0, 0, -default_hip_height_ - 0.02*sin(2.0 * M_PI * current_time_sec_/ period_), 0, 0, 0);
+  Eigen::Matrix4d rh_2_pelv = robotis_framework::getTransformationXYZRPY(0.0, 0.035, 0.0285, 0.0, 0.0, 0.0);
+  Eigen::Matrix4d lh_2_pelv = robotis_framework::getTransformationXYZRPY(0.0, -0.035, 0.0285, 0.0, 0.0, 0.0);
+  Eigen::Matrix4d g_2_rf = robotis_framework::getTransformationXYZRPY(0.0, -0.035, 0.0, 0.0, 0.0, 0.0);
+  Eigen::Matrix4d g_2_lf = robotis_framework::getTransformationXYZRPY(0.0, 0.035, 0.0, 0.0, 0.0, 0.0);
+
+  Eigen::Matrix4d g_2_pelvis = robotis_framework::getTransformationXYZRPY(0.0, 0.0, default_hip_height_ + 0.03,0.1*sin(2.0 * M_PI * current_time_sec_/ period_), 0.0, 0.0);
+  Eigen::Matrix4d pelvis_2_g = robotis_framework::getInverseTransformation(g_2_pelvis);
+
+  Eigen::Matrix4d rh2rf = (rh_2_pelv*pelvis_2_g)*g_2_rf;
+  Eigen::Matrix4d lh2rf = (lh_2_pelv*pelvis_2_g)*g_2_lf;
+
+  robotis_framework::Pose3D right_pose = robotis_framework::getPose3DfromTransformMatrix(rh2rf);
+  robotis_framework::Pose3D left_pose = robotis_framework::getPose3DfromTransformMatrix(lh2rf);
+
+
+  // op3_kd_->calcInverseKinematicsForRightLeg(r_leg_angle_rad_, 0, 0, -default_hip_height_ - 0.02*sin(2.0 * M_PI * current_time_sec_/ period_), 0, 0, 0);
+  // op3_kd_->calcInverseKinematicsForLeftLeg(l_leg_angle_rad_, 0, 0, -default_hip_height_ - 0.02*sin(2.0 * M_PI * current_time_sec_/ period_), 0, 0, 0);
+  op3_kd_->calcInverseKinematicsForRightLeg(r_leg_angle_rad_,right_pose.x,right_pose.y,right_pose.z,right_pose.roll,right_pose.pitch,right_pose.yaw);
+  op3_kd_->calcInverseKinematicsForLeftLeg(l_leg_angle_rad_, left_pose.x, left_pose.y, left_pose.z,left_pose.roll, left_pose.pitch, left_pose.yaw);
+
   
   result_["r_hip_yaw"]->goal_position_   = r_leg_angle_rad_[0];
   result_["r_hip_roll"]->goal_position_  = r_leg_angle_rad_[1];
