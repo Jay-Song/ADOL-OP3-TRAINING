@@ -61,7 +61,10 @@ int main(int argc, char **argv)
     PortHandler *port_handler = (PortHandler *) PortHandler::getPortHandler(g_device_name.c_str());
     bool set_port_result = port_handler->setBaudRate(BAUD_RATE);
     if (set_port_result == false)
+    {
       ROS_ERROR("Error Set port");
+      return -1;
+    }
 
     PacketHandler *packet_handler = PacketHandler::getPacketHandler(PROTOCOL_VERSION);
 
@@ -73,15 +76,18 @@ int main(int argc, char **argv)
       int _return = packet_handler->write1ByteTxRx(port_handler, SUB_CONTROLLER_ID, POWER_CTRL_TABLE, 1);
 
       if(_return != 0)
-        ROS_ERROR("Torque on DXLs! [%s]", packet_handler->getRxPacketError(_return));
+        ROS_ERROR("Power on DXLs! [%s]", packet_handler->getRxPacketError(_return));
       else
-        ROS_INFO("Torque on DXLs!");
+        ROS_INFO("Power on DXLs!");
 
       if (_return == 0)
         break;
       else
         torque_on_count++;
     }
+
+    if (torque_on_count == 5)
+      return -1;
 
     usleep(100 * 1000);
 
